@@ -1,0 +1,13 @@
+{
+  "name": "lyric-reel",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "concurrently --names backend,frontend --prefix-colors cyan.bold,magenta.bold --kill-others-on-fail \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "typecheck": "concurrently --names backend,frontend --prefix-colors cyan,magenta \"npm run typecheck --prefix backend\" \"npm run typecheck --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "language": "hi",
+  "duration": 6.42,
+  "words": [
+    { "word": "tere",  "start": 0.52, "end": 0.91, "score": 0.92 },
+    { "word": "bina",  "start": 0.92, "end": 1.28, "score": 0.94 },
+    { "word": "mera",  "start": 1.31, "end": 1.66, "score": 0.91 },
+    { "word": "jee",   "start": 1.68, "end": 1.93, "score": 0.88 },
+    { "word": "lagda", "start": 1.95, "end": 2.41, "score": 0.93 },
+    { "word": "nahi",  "start": 2.43, "end": 2.85, "score": 0.95 },
+
+    { "word": "tere",  "start": 3.20, "end": 3.55, "score": 0.92 },
+    { "word": "bina",  "start": 3.57, "end": 3.93, "score": 0.94 },
+    { "word": "mera",  "start": 3.96, "end": 4.28, "score": 0.90 },
+    { "word": "dil",   "start": 4.30, "end": 4.55, "score": 0.93 },
+    { "word": "kahin", "start": 4.58, "end": 5.04, "score": 0.91 },
+    { "word": "nahi",  "start": 5.06, "end": 5.50, "score": 0.94 }
+  ]
+}
