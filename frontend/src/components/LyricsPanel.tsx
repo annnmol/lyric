@@ -5,11 +5,18 @@ import type { AlignedWord, AlignmentResult } from "../lib/types";
 interface Props {
   audioFile: File | null;
   audioName: string | null;
-  onAligned: (result: AlignmentResult) => void;
+  onAlignmentSourced: (result: AlignmentResult) => void;
+  onOpenEditor: () => void;
   aligned: AlignmentResult | null;
 }
 
-export function LyricsPanel({ audioFile, audioName, onAligned, aligned }: Props) {
+export function LyricsPanel({
+  audioFile,
+  audioName,
+  onAlignmentSourced,
+  onOpenEditor,
+  aligned,
+}: Props) {
   const [lyrics, setLyrics] = useState("");
   const [language, setLanguage] = useState("hi");
   const [languages, setLanguages] = useState<Record<string, string>>({});
@@ -28,8 +35,21 @@ export function LyricsPanel({ audioFile, audioName, onAligned, aligned }: Props)
     setError(null);
     setBusy(true);
     try {
-      const r = await alignAudio(audioFile, lyrics, language);
-      onAligned(r);
+      // Strip CR (the actual culprit behind "hanjoo\r\nAkh"-style polluted
+      // tokens) but keep \n so the backend can use line breaks as natural
+      // phrase boundaries when distributing words across speech regions.
+      const cleaned = lyrics
+        .replace(/\r/g, "")
+        .split("\n")
+        .map((line) => line.replace(/\s+/g, " ").trim())
+        .filter((line) => line.length > 0)
+        .join("\n");
+      if (!cleaned) {
+        setError("lyrics had no usable text after cleanup");
+        return;
+      }
+      const r = await alignAudio(audioFile, cleaned, language);
+      onAlignmentSourced(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -45,7 +65,7 @@ export function LyricsPanel({ audioFile, audioName, onAligned, aligned }: Props)
       if (parsed.language && languages[parsed.language]) {
         setLanguage(parsed.language);
       }
-      onAligned(parsed);
+      onAlignmentSourced(parsed);
     } catch (e) {
       setError(
         `couldn't read alignment JSON: ${e instanceof Error ? e.message : String(e)}`,
@@ -119,25 +139,55 @@ export function LyricsPanel({ audioFile, audioName, onAligned, aligned }: Props)
       </div>
 
       {aligned ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
           <span>
             aligned <strong>{aligned.words.length}</strong> words ·{" "}
             {aligned.duration.toFixed(2)}s · {aligned.language}
           </span>
-          <button
-            type="button"
-            onClick={handleDownloadJson}
-            className="flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
-            title="Download as JSON to edit timings or re-import later"
-          >
-            <DownloadIcon className="h-3.5 w-3.5" />
-            JSON
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenEditor}
+              className="flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
+              title="Open the timing editor to fix offset, stretch, or per-word placement"
+            >
+              Tune timing
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadJson}
+              className="flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
+              title="Download as JSON to edit timings or re-import later"
+            >
+              <DownloadIcon className="h-3.5 w-3.5" />
+              JSON
+            </button>
+          </div>
         </div>
       ) : null}
 
       {error ? <p className="text-xs text-accent">{error}</p> : null}
     </div>
+  );
+}
+
+function ArrowRight({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
   );
 }
 

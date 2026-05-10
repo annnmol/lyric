@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AlignmentEditor } from "./components/AlignmentEditor";
 import { AudioPanel } from "./components/AudioPanel";
 import { BackgroundPanel } from "./components/BackgroundPanel";
 import { ExportPanel } from "./components/ExportPanel";
@@ -15,6 +16,8 @@ import type {
   ReelProps,
 } from "./lib/types";
 
+type View = "workflow" | "editor";
+
 export function App() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -22,9 +25,12 @@ export function App() {
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
 
   const [aligned, setAligned] = useState<AlignmentResult | null>(null);
+  const [originalAligned, setOriginalAligned] =
+    useState<AlignmentResult | null>(null);
   const [background, setBackground] = useState<BackgroundAsset | null>(null);
   const [preset, setPreset] = useState<Preset>(PRESETS[0]);
 
+  const [view, setView] = useState<View>("workflow");
   const [clearKey, setClearKey] = useState(0);
   const [clearing, setClearing] = useState(false);
 
@@ -48,6 +54,16 @@ export function App() {
   const hasState =
     audioFile != null || aligned != null || background != null;
 
+  function handleAlignmentSourced(r: AlignmentResult) {
+    setAligned(r);
+    setOriginalAligned(r);
+  }
+
+  function handleAlignmentEdited(r: AlignmentResult) {
+    setAligned(r);
+    setView("workflow");
+  }
+
   async function handleClear() {
     if (
       !window.confirm(
@@ -64,7 +80,9 @@ export function App() {
       setAudioName(null);
       setAudioDuration(null);
       setAligned(null);
+      setOriginalAligned(null);
       setBackground(null);
+      setView("workflow");
       setClearKey((k) => k + 1);
       console.log(
         `cleared ${uploadsDeleted} upload(s) and ${outDeleted} render(s)`,
@@ -103,67 +121,81 @@ export function App() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-6 px-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="space-y-5">
-          <SectionCard step={1} title="Import audio" done={audioUrl != null}>
-            <AudioPanel
-              key={`audio-${clearKey}`}
-              fileName={audioName}
-              durationSeconds={audioDuration}
-              onAudio={(file, url, dur) => {
-                setAudioFile(file);
-                setAudioUrl(url);
-                setAudioName(file.name);
-                setAudioDuration(dur);
-              }}
-            />
-          </SectionCard>
+      {view === "editor" && aligned && originalAligned ? (
+        <AlignmentEditor
+          aligned={aligned}
+          originalAligned={originalAligned}
+          audioUrl={audioUrl}
+          audioDuration={audioDuration}
+          background={background}
+          preset={preset}
+          onSave={handleAlignmentEdited}
+          onCancel={() => setView("workflow")}
+        />
+      ) : (
+        <main className="mx-auto grid max-w-7xl gap-6 px-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div className="space-y-5">
+            <SectionCard step={1} title="Import audio" done={audioUrl != null}>
+              <AudioPanel
+                key={`audio-${clearKey}`}
+                fileName={audioName}
+                durationSeconds={audioDuration}
+                onAudio={(file, url, dur) => {
+                  setAudioFile(file);
+                  setAudioUrl(url);
+                  setAudioName(file.name);
+                  setAudioDuration(dur);
+                }}
+              />
+            </SectionCard>
 
-          <SectionCard
-            step={2}
-            title="Paste lyrics & align"
-            description="WhisperX runs locally — first run downloads the language model."
-            done={aligned != null}
-          >
-            <LyricsPanel
-              key={`lyrics-${clearKey}`}
-              audioFile={audioFile}
-              audioName={audioName}
-              aligned={aligned}
-              onAligned={setAligned}
-            />
-          </SectionCard>
+            <SectionCard
+              step={2}
+              title="Paste lyrics & align"
+              description="WhisperX runs locally — first run downloads the language model."
+              done={aligned != null}
+            >
+              <LyricsPanel
+                key={`lyrics-${clearKey}`}
+                audioFile={audioFile}
+                audioName={audioName}
+                aligned={aligned}
+                onAlignmentSourced={handleAlignmentSourced}
+                onOpenEditor={() => setView("editor")}
+              />
+            </SectionCard>
 
-          <SectionCard
-            step={3}
-            title="Background"
-            description="Image loops over the full duration; video keeps its own timing."
-            done={background != null}
-          >
-            <BackgroundPanel
-              key={`bg-${clearKey}`}
-              background={background}
-              onBackground={setBackground}
-            />
-          </SectionCard>
+            <SectionCard
+              step={3}
+              title="Background"
+              description="Image loops over the full duration; video keeps its own timing."
+              done={background != null}
+            >
+              <BackgroundPanel
+                key={`bg-${clearKey}`}
+                background={background}
+                onBackground={setBackground}
+              />
+            </SectionCard>
 
-          <SectionCard step={4} title="Animation preset">
-            <PresetPanel preset={preset} onSelect={setPreset} />
-          </SectionCard>
+            <SectionCard step={4} title="Animation preset">
+              <PresetPanel preset={preset} onSelect={setPreset} />
+            </SectionCard>
 
-          <SectionCard step={5} title="Export">
-            <ExportPanel
-              key={`export-${clearKey}`}
-              reel={reel}
-              ready={exportReady}
-            />
-          </SectionCard>
-        </div>
+            <SectionCard step={5} title="Export">
+              <ExportPanel
+                key={`export-${clearKey}`}
+                reel={reel}
+                ready={exportReady}
+              />
+            </SectionCard>
+          </div>
 
-        <aside className="lg:sticky lg:top-8 lg:self-start">
-          <ReelPreview reel={reel} />
-        </aside>
-      </main>
+          <aside className="lg:sticky lg:top-8 lg:self-start">
+            <ReelPreview reel={reel} />
+          </aside>
+        </main>
+      )}
     </div>
   );
 }
